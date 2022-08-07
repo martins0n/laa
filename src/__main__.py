@@ -12,10 +12,7 @@ from torch.utils.data import DataLoader
 from src.crowddatasets import DATASET_MAP
 from src.laa import LAA, CrowdDataset, inference, majority_vote, train
 
-try:
-    import wandb
-except ImportError:
-    wandb = MagicMock()
+
 
 app = typer.Typer()
 
@@ -52,6 +49,8 @@ def main(
 
     if not logging:
         wandb = MagicMock()
+    else:
+        import wandb
 
     config = dict(
         batch_size=batch_size,
@@ -64,7 +63,6 @@ def main(
         reg_1=reg_1,
     )
 
-    print(config)
     wandb.init(project="laa", config=config, tags=[dataset_name])
 
     model = LAA(sample_dataset.n_workers, sample_dataset.n_classes, d_kl=d_kl)
@@ -89,7 +87,6 @@ def main(
 
     ground_truth_estim = inference(model, eval_dataloader)
 
-    print(ground_truth_estim, sample_dataset.gt)
     print(f"laa: {np.mean(ground_truth_estim == sample_dataset.gt)}")
 
     mv_result = majority_vote(sample_dataset.df_answers)

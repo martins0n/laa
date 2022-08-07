@@ -96,11 +96,11 @@ class LAA(nn.Module):
         )  # shape ()
 
         prior = (
-            (mask * x).view((batch_size, self.n_voters, self.n_classes)).sum(dim=(0, 1))
-        )  # shape (n_classes)
-        prior = prior / prior.sum()
+            (mask * x).view((batch_size, self.n_voters, self.n_classes)).sum(dim=1)
+        )  # shape (batch_size, n_classes)
+        prior = (prior.transpose(0, 1) / prior.sum(dim=-1)).transpose(0, 1)
         D_kl = (
-            (q_theta * ((q_theta / prior.repeat(batch_size, 1).clamp(1.0e-10)).log()))
+            (q_theta * ((q_theta / prior.clamp(1.0e-10)).log()))
             .sum(-1)
             .mean()
         )  # shape ()
