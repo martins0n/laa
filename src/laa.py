@@ -52,46 +52,58 @@ class LAA(nn.Module):
             nn.Softmax(dim=-1),
         )
 
+    def encode(
+        self, x: torch.FloatTensor, mask: torch.FloatTensor
+    ) -> torch.FloatTensor:
+        # x has shape (batch_size, n_voters * n_classes)
+        # mask has shape (batch_size, n_voters * n_classes)
+        q_theta: torch.FloatTensor = self.encoder(
+            x * mask
+        )  # shape (batch_size, n_classes)
+        return q_theta
+
+    def sample(self, q_theta: torch.FloatTensor) -> torch.FloatTensor:
+        # q_theta has shape (batch_size, n_classes)
+        y_sampled = torch.distributions.Categorical(
+            probs=q_theta
+        ).sample()  # shape (n_classes)
+
+        y_sampled = F.one_hot(y_sampled, num_classes=self.n_classes).type(
+            torch.FloatTensor
+        )  # shape (batch_size, n_classes)
+        return y_sampled
+
     def forward(self, x: torch.FloatTensor, mask: torch.FloatTensor) -> dict:
 
         batch_size = x.size()[0]
 
-        q_theta: torch.Tensor = self.encoder(x * mask)
+        q_theta = self.encode(x, mask)  # shape (batch_size, n_classes)
+
+        y_sampled = self.sample(q_theta)  # shape (batch_size, n_classes)
 
         y_estim = F.one_hot(
             q_theta.argmax(-1, keepdim=True), num_classes=self.n_classes
-        ).type(torch.FloatTensor)[:, 0, :]
+        ).type(torch.FloatTensor)[
+            :, 0, :
+        ]  # shape (batch_size, n_classes)
 
-        y_sampled = torch.distributions.Categorical(probs=q_theta).sample()
-        y_sampled = F.one_hot(y_sampled, num_classes=self.n_classes).type(
-            torch.FloatTensor
-        )
-
-        p_phi: torch.Tensor = self.decoder(y_sampled)
+        p_phi: torch.Tensor = self.decoder(
+            y_sampled
+        )  # shape (batch_size, n_voters, n_classes)
 
         reconstruction_loss = (
             +(mask * x * p_phi.view((batch_size, -1)).log()).sum(-1).mean()
-        )
+        )  # shape ()
 
         prior = (
             (mask * x).view((batch_size, self.n_voters, self.n_classes)).sum(dim=(0, 1))
-        )
+        )  # shape (n_classes)
         prior = prior / prior.sum()
         D_kl = (
-            (
-                q_theta
-                * (
-                    (
-                        q_theta
-                        / prior.repeat_interleave(batch_size)
-                        .view((batch_size, -1))
-                        .clamp(1.0e-10)
-                    ).log()
-                )
-            )
+            (q_theta * ((q_theta / prior.repeat(batch_size, 1).clamp(1.0e-10)).log()))
             .sum(-1)
             .mean()
-        )
+        )  # shape ()
 
         return dict(
             p_phi=p_phi,
@@ -121,7 +133,14 @@ class CrowdDataset(Dataset):
         mask = torch.from_numpy(row).ge(-1).type(torch.FloatTensor)
         mask = mask.repeat_interleave(self.n_classes).view(-1, self.n_classes).flatten()
         x = torch.from_numpy(row).nan_to_num(0).type(torch.int64)
-        x = F.one_hot(x, num_classes=self.n_classes,).type(torch.FloatTensor).flatten()
+        x = (
+            F.one_hot(
+                x,
+                num_classes=self.n_classes,
+            )
+            .type(torch.FloatTensor)
+            .flatten()
+        )
 
         return {"x": x, "mask": mask, "gt": self.ground_truth[index]}
 
@@ -142,9 +161,9 @@ def train(model, optimizer, dataloader, device="cpu", reg_1=0.001):
             torch.zeros_like(torch.FloatTensor(1)), requires_grad=True
         )
         for W in model.parameters():
-            l1_reg = l1_reg + reg_1* W.norm(1)
+            l1_reg = l1_reg + W.norm(1)
 
-        loss = loss + l1_reg
+        loss = loss + reg_1 * l1_reg
 
         epoch_loss.append(loss.item())
 

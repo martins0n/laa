@@ -38,7 +38,7 @@ def main(
     seed: int = 11,
     logging: bool = True,
 ):
-    
+
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -49,10 +49,10 @@ def main(
 
     dataset_kwargs = json.loads(dataset_kwargs)
     sample_dataset = DATASET_MAP[dataset_name](**dataset_kwargs)
-    
+
     if not logging:
         wandb = MagicMock()
-    
+
     config = dict(
         batch_size=batch_size,
         lr=lr,
@@ -61,9 +61,9 @@ def main(
         dataset_name=dataset_name,
         dataset_kwargs=dataset_kwargs,
         seed=seed,
-        reg_1=reg_1
+        reg_1=reg_1,
     )
-    
+
     print(config)
     wandb.init(project="laa", config=config, tags=[dataset_name])
 
@@ -82,7 +82,9 @@ def main(
         ground_truth_estim = inference(model, eval_dataloader)
         train_loss = epoch_loss
         train_accuracy = np.mean(ground_truth_estim == sample_dataset.gt)
-        wandb.log(dict(train_loss=train_loss, train_accuracy=train_accuracy, epoch=epoch))
+        wandb.log(
+            dict(train_loss=train_loss, train_accuracy=train_accuracy, epoch=epoch)
+        )
         print(f"{epoch} loss {train_loss:0.4f} accuracy laa: {train_accuracy}")
 
     ground_truth_estim = inference(model, eval_dataloader)
