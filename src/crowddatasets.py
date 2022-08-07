@@ -28,7 +28,7 @@ def bluebirds(*args, **kwargs) -> Dataset:
 
     labels_response = requests.get(LABELS)
     gt_response = requests.get(GT)
-    df_labels = pd.DataFrame(yaml.load(labels_response.text))
+    df_labels = pd.DataFrame(yaml.load(labels_response.text, Loader=yaml.FullLoader))
 
     df_labels = df_labels.melt(ignore_index=False)
     df_labels = df_labels.reset_index()
@@ -39,7 +39,7 @@ def bluebirds(*args, **kwargs) -> Dataset:
     df_labels.worker_id = df_labels.worker_id.apply(lambda x: x2y[x])
     df_labels.answer = df_labels.answer.astype(int)
 
-    df_gt = pd.Series(yaml.load(gt_response.text))
+    df_gt = pd.Series(yaml.load(gt_response.text, Loader=yaml.FullLoader))
     df_gt = df_gt.astype(int)
 
     dataset = Dataset(
@@ -87,12 +87,12 @@ def releveance2(n_tasks: Optional[int] = 1000, *args, **kwargs) -> Dataset:
 
 def classification_dataset_generator(
     n_workers: int = 20,
-    n_tasks: int = 5000,
-    good_workers_frac: float = 0.6,
-    overlap: int = 2,
+    n_tasks: int = 1000,
+    good_workers_frac: float = 0.8,
+    overlap: int = 3,
     good_probability: float = 0.9,
-    bad_probability: float = 0.5,
-    n_classes: int = 5,
+    bad_probability: float = 0.6,
+    n_classes: int = 3,
 ) -> Dataset:
     agents = np.arange(n_workers)
     classes = np.arange(n_classes)

@@ -35,11 +35,12 @@ class ReshapeWrapper(nn.Module):
 
 
 class LAA(nn.Module):
-    def __init__(self, n_voters: int, n_classes: int):
+    def __init__(self, n_voters: int, n_classes: int, d_kl: float):
         super().__init__()
 
         self.n_voters = n_voters
         self.n_classes = n_classes
+        self.d_kl = d_kl
 
         self.encoder = nn.Sequential(
             nn.Linear(n_voters * n_classes, n_classes), nn.Softmax()
@@ -96,7 +97,7 @@ class LAA(nn.Module):
             p_phi=p_phi,
             reconstruction_loss=reconstruction_loss,
             D_kl=D_kl,
-            loss=-reconstruction_loss + 0.001 * D_kl,
+            loss=-reconstruction_loss + self.d_kl * D_kl,
             y_estim=y_estim,
             q_theta=q_theta,
         )
@@ -125,7 +126,7 @@ class CrowdDataset(Dataset):
         return {"x": x, "mask": mask, "gt": self.ground_truth[index]}
 
 
-def train(model, optimizer, dataloader, device="cpu"):
+def train(model, optimizer, dataloader, device="cpu", reg_1=0.001):
     model.train()
     epoch_loss = list()
     for data in dataloader:
@@ -141,7 +142,7 @@ def train(model, optimizer, dataloader, device="cpu"):
             torch.zeros_like(torch.FloatTensor(1)), requires_grad=True
         )
         for W in model.parameters():
-            l1_reg = l1_reg + 0.001 * W.norm(1)
+            l1_reg = l1_reg + reg_1* W.norm(1)
 
         loss = loss + l1_reg
 

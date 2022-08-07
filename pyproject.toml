@@ -5,15 +5,18 @@ description = ""
 authors = ["martins0n <martinmail@mail.ru>"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.8,<3.11"
 torch = "^1.10.0"
 pandas = "^1.3.4"
 requests = "^2.26.0"
 crowd-kit = "^0.0.8"
 PyYAML = "^6.0"
 typer = "^0.4.0"
+scipy = ">=1.8.0"
 
 [tool.poetry.dev-dependencies]
+mlflow = "^1.27.0"
+wandb = "^0.13.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
