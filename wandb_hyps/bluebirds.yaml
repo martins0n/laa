@@ -1,0 +1,38 @@
+command:
+  - poetry
+  - run
+  - python
+  - -m
+  - src
+  - inference
+  - --dataset-name=bluebirds
+  - ${args}
+method: bayes
+metric:
+  goal: minimize
+  name: eval_loss
+parameters:
+  batch-size:
+    distribution: int_uniform
+    max: 128
+    min: 2
+  d-kl:
+    distribution: log_uniform
+    max: -2
+    min: -10
+  lr:
+    distribution: log_uniform
+    max: -2
+    min: -10
+  n-epoch:
+    distribution: int_uniform
+    max: 300
+    min: 50
+  patience:
+    distribution: int_uniform
+    max: 15
+    min: 0
+  reg-1:
+    distribution: log_uniform
+    max: -2
+    min: -10

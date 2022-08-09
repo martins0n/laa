@@ -1,0 +1,39 @@
+command:
+  - poetry
+  - run
+  - python
+  - -m
+  - src
+  - inference
+  - --dataset-name=classification_dataset_generator
+  - '--dataset-kwargs={"n_workers": 100, "n_tasks": 5000, "overlap": 2, "n_classes": 3, "good_probability": 0.9, "good_workers_frac": 0.6, "bad_probability": 0.6}'
+  - ${args}
+method: bayes
+metric:
+  goal: minimize
+  name: eval_loss
+parameters:
+  batch-size:
+    distribution: int_uniform
+    max: 128
+    min: 2
+  d-kl:
+    distribution: log_uniform
+    max: -2
+    min: -10
+  lr:
+    distribution: log_uniform
+    max: -2
+    min: -10
+  n-epoch:
+    distribution: int_uniform
+    max: 300
+    min: 50
+  patience:
+    distribution: int_uniform
+    max: 15
+    min: 0
+  reg-1:
+    distribution: log_uniform
+    max: -2
+    min: -10

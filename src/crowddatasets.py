@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,30 @@ class Dataset:
     n_tasks: int
     n_workers: int
     df_answers: pd.DataFrame
-    gt: pd.DataFrame
+    gt: np.ndarray
+
+    def train_test_split(
+        self, train_frac: float = 0.8, random_state: int = 11
+    ) -> Tuple["Dataset", "Dataset"]:
+        rng = np.random.default_rng(random_state)
+        task_ids = self.df_answers.task_id.unique()
+        train_ids = rng.choice(task_ids, int(train_frac * len(task_ids)), replace=False)
+        test_ids = np.setdiff1d(task_ids, train_ids)
+        df_answers_train = self.df_answers[self.df_answers.task_id.isin(train_ids)]
+        df_answers_test = self.df_answers[self.df_answers.task_id.isin(test_ids)]
+        return Dataset(
+            self.n_classes,
+            self.n_tasks,
+            self.n_workers,
+            df_answers_train,
+            self.gt,
+        ), Dataset(
+            self.n_classes,
+            self.n_tasks,
+            self.n_workers,
+            df_answers_test,
+            self.gt,
+        )
 
 
 def encoder(ids: np.ndarray) -> dict:
@@ -53,7 +76,7 @@ def bluebirds(*args, **kwargs) -> Dataset:
     return dataset
 
 
-def releveance2(n_tasks: Optional[int] = 1000, *args, **kwargs) -> Dataset:
+def relevance2(n_tasks: Optional[int] = None, *args, **kwargs) -> Dataset:
 
     df_labels, gt_response = load_dataset("relevance-2")
 
@@ -65,6 +88,11 @@ def releveance2(n_tasks: Optional[int] = 1000, *args, **kwargs) -> Dataset:
     gt_response.columns = ["task_id", "answer"]
 
     df_labels.columns = ["worker_id", "task_id", "answer"]
+
+    df_labels = df_labels[df_labels.task_id.isin(gt_response.task_id)]
+
+    assert set(gt_response.task_id) == set(df_labels.task_id)
+
     x2y = encoder(df_labels.task_id.values)
     df_labels.task_id = df_labels.task_id.apply(lambda x: x2y[x])
     gt_response.task_id = gt_response.task_id.apply(lambda x: x2y[x])
@@ -136,8 +164,8 @@ def classification_dataset_generator(
     return dataset
 
 
-DATASET_MAP = {
+DATASET_MAP: Dict[str, Callable[..., Dataset]] = {
     "classification_dataset_generator": classification_dataset_generator,
-    "releveance2": releveance2,
+    "relevance2": relevance2,
     "bluebirds": bluebirds,
 }
